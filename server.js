@@ -8,6 +8,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// تقديم ملفات public (CSS, JS, HTML...)
 app.use(express.static(path.join(__dirname, 'public')));
 
 const authMiddleware = require('./middleware/auth');
@@ -23,6 +25,15 @@ app.use('/api/users', authMiddleware, require('./routes/users'));
 app.use('/api/barcode', authMiddleware, require('./routes/barcode'));
 app.use('/api/entreprise', authMiddleware, require('./routes/entreprise'));
 app.use('/api/numeros', authMiddleware, require('./routes/numeros'));
+
+// الصفحة الرئيسية - إعادة توجيه إلى app.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+app.get('/app.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

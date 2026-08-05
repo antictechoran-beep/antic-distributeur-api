@@ -516,20 +516,18 @@ function showAddModal() {
         { label: 'الكود التلقائي', name: 'code', type: 'display', value: '' },
         { label: 'الاسم', name: 'nom', type: 'text' },
         { label: 'الفئة', name: 'categorie', type: 'text' },
-        { label: 'الكمية', name: 'quantite', type: 'number' },
-        { label: 'سعر الشراء', name: 'prix_achat', type: 'number' },
-        { label: 'سعر البيع', name: 'prix_vente', type: 'number' },
-        { label: 'الحد الأدنى', name: 'seuil_alert', type: 'number' },
-        { label: 'المورد', name: 'fournisseur', type: 'text' },
-        { label: 'الموقع', name: 'emplacement', type: 'text' },
-        { label: 'رابط الصورة', name: 'image_url', type: 'text' },
+        { label: 'الكمية', name: 'quantite', type: 'number', def: '0' },
+        { label: 'سعر الشراء', name: 'prix_achat', type: 'number', def: '0' },
+        { label: 'سعر البيع', name: 'prix_vente', type: 'number', def: '0' },
+        { label: 'الحد الأدنى', name: 'seuil_alert', type: 'number', def: '0' },
+        { label: 'رابط الصورة', name: 'image_url', type: 'image' },
       ]; break;
     case 'clients':
       title.textContent = 'إضافة زبون';
       fields = [
         { label: 'الكود التلقائي', name: 'code', type: 'display', value: '' },
-        { label: 'الاسم', name: 'nom', type: 'text' },
-        { label: 'الهاتف', name: 'telephone', type: 'tel' },
+        { label: 'الاسم *', name: 'nom', type: 'text', required: true },
+        { label: 'الهاتف *', name: 'telephone', type: 'tel', required: true },
         { label: 'الإيميل', name: 'email', type: 'email' },
         { label: 'العنوان', name: 'adresse', type: 'text' },
         { label: 'المدينة', name: 'ville', type: 'text' },
@@ -589,8 +587,13 @@ function showAddModal() {
       html += `<div class="form-group"><label>${f.label}</label><div class="code-display" id="disp_${f.name}">...</div><input type="hidden" name="${f.name}" id="inp_${f.name}"></div>`;
     } else if (f.type === 'select') {
       html += `<div class="form-group"><label>${f.label}</label><select name="${f.name}">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>`;
+    } else if (f.type === 'image') {
+      html += `<div class="form-group"><label>${f.label}</label><div class="image-picker"><input type="text" name="${f.name}" id="addImgUrl" placeholder="رابط الصورة"><button type="button" onclick="document.getElementById('addImgFile').click()"><i class="fas fa-image"></i></button></div><input type="file" id="addImgFile" accept="image/*" style="display:none" onchange="handleAddImageSelect(event)"><div class="image-preview" id="addImgPreview"><i class="fas fa-image" style="color:var(--text-light)"></i></div></div>`;
+    } else if (f.name === 'categorie') {
+      const categories = [...new Set((db.stock || []).map(p => p.categorie).filter(c => c))];
+      html += `<div class="form-group"><label>${f.label}</label><div style="display:flex;gap:8px;"><input type="text" name="${f.name}" id="catInput" placeholder="اختر أو أضف فئة" list="catList" style="flex:1;"><datalist id="catList">${categories.map(c => `<option value="${c}">`).join('')}</datalist><button type="button" onclick="addNewCategory()" style="padding:10px 14px;background:var(--info);color:white;border:none;border-radius:10px;font-size:14px;"><i class="fas fa-plus"></i></button></div></div>`;
     } else {
-      html += `<div class="form-group"><label>${f.label}</label><input type="${f.type}" name="${f.name}" required></div>`;
+      html += `<div class="form-group"><label>${f.label}</label><input type="${f.type}" name="${f.name}" value="${f.def || ''}" ${f.required ? 'required' : ''}></div>`;
     }
   });
   html += '<button type="submit" class="btn-primary">حفظ</button></form>';
@@ -610,7 +613,14 @@ function showAddModal() {
 async function handleAddSubmit(e) {
   e.preventDefault();
   const formData = new FormData(e.target);
-  const data = {}; formData.forEach((v, k) => data[k] = v);
+  const data = {}; formData.forEach((v, k) => data[k] = v || '');
+  // قيم افتراضية للمنتج
+  if (currentSheet === 'stock') {
+    data.quantite = data.quantite || '0';
+    data.prix_achat = data.prix_achat || '0';
+    data.prix_vente = data.prix_vente || '0';
+    data.seuil_alert = data.seuil_alert || '0';
+  }
   if (currentSheet === 'achats' || currentSheet === 'depenses') data.responsable = currentUser ? currentUser.username : 'Admin';
   try {
     await apiPost(`/${currentSheet}`, data);
@@ -748,18 +758,52 @@ function renderVenteInterface() {
   setTimeout(() => { const mp = document.getElementById('venteMontantPaye'); if (mp) mp.addEventListener('input', updateReste); }, 10);
 }
 function setVenteTab(tab) { venteTab = tab; renderVenteInterface(); }
+let galleryFilter = '';
+
 function renderProductGallery() {
   const stock = db.stock || [];
-  let html = '<div class="gallery-grid">';
-  stock.forEach(p => {
+  const categories = [...new Set(stock.map(p => p.categorie).filter(c => c))];
+  let html = '<div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;">';
+  html += `<button onclick="setGalleryFilter('')" class="vente-tab ${galleryFilter === '' ? 'active' : ''}" style="flex:none;padding:8px 16px;font-size:13px;">الكل</button>`;
+  categories.forEach(cat => {
+    html += `<button onclick="setGalleryFilter('${cat}')" class="vente-tab ${galleryFilter === cat ? 'active' : ''}" style="flex:none;padding:8px 16px;font-size:13px;">${cat}</button>`;
+  });
+  html += '</div>';
+  html += '<div class="gallery-grid">';
+  const filtered = galleryFilter ? stock.filter(p => p.categorie === galleryFilter) : stock;
+  filtered.forEach(p => {
     const qte = parseFloat(p.quantite) || 0;
     if (qte <= 0) return;
     const img = p.image_url || '';
-    html += `<div class="gallery-item" onclick="addToPanier('${p.code}')"><div class="img-box">${img ? `<img src="${img}" onerror="this.parentElement.innerHTML='<i class=\'fas fa-image no-img\'></i>'">` : '<i class="fas fa-image no-img"></i>'}</div><div class="info"><div class="name">${p.nom}</div><div class="price">${formatNumber(p.prix_vente || 0)} DA</div></div></div>`;
+    html += `<div class="gallery-item" onclick="addToPanier('${p.code}')"><div class="img-box">${img ? `<img src="${img}" onerror="this.parentElement.innerHTML='<i class=\'fas fa-image no-img\'></i>'">` : '<i class="fas fa-image no-img"></i>'}</div><div class="info"><div class="name">${p.nom}</div><div class="price">${formatNumber(p.prix_vente || 0)} DA</div><div style="font-size:10px;color:var(--text-light);">${p.categorie || ''}</div></div></div>`;
   });
   html += '</div>';
   return html;
 }
+
+function setGalleryFilter(cat) {
+  galleryFilter = cat;
+  renderVenteInterface();
+}
+function handleAddImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('addImgUrl').value = e.target.result;
+    document.getElementById('addImgPreview').innerHTML = `<img src="${e.target.result}">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function addNewCategory() {
+  const input = document.getElementById('catInput');
+  const val = prompt('أدخل اسم الفئة الجديدة:');
+  if (val && val.trim()) {
+    input.value = val.trim();
+  }
+}
+
 async function scanBarcode() {
   const code = document.getElementById('barcodeInput').value.trim();
   if (!code) return;
