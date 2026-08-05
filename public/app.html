@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANTIC Distributeur Pro v3.1 - API</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{--primary:#1a5276;--primary-dark:#154360;--accent:#e67e22;--success:#27ae60;--danger:#e74c3c;--warning:#f39c12;--info:#3498db;--bg:#f0f2f5;--card:#fff;--text:#2c3e50;--text-light:#7f8c8d;--border:#e0e0e0;--shadow:0 2px 12px rgba(0,0,0,0.1);--radius:16px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;padding:20px;text-align:center}
+#loginScreen .logo-box{width:100px;height:100px;background:rgba(255,255,255,0.15);border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:24px}
+#loginScreen .logo-box i{font-size:48px;color:white}
+#loginScreen h1{color:white;font-size:26px;margin-bottom:8px}
+#loginScreen p{color:rgba(255,255,255,0.7);font-size:15px;margin-bottom:32px}
+.login-form{width:100%;max-width:320px;display:grid;gap:14px}
+.login-form input{width:100%;padding:14px 16px;border:none;border-radius:12px;font-size:15px;background:rgba(255,255,255,0.15);color:white;outline:none}
+.login-form input::placeholder{color:rgba(255,255,255,0.5)}
+.login-form button{width:100%;padding:14px;background:white;color:var(--primary);border:none;border-radius:12px;font-size:16px;font-weight:600}
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:10001;flex-direction:column}
+.loading-overlay.active{display:flex}
+.spinner{width:50px;height:50px;border:4px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay p{color:white;margin-top:16px;font-size:15px}
+#app{display:none;min-height:100vh;padding-bottom:80px}
+#app.active{display:block}
+.top-bar{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white;padding:16px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+.top-bar h2{font-size:18px;font-weight:600}
+.top-bar .actions{display:flex;gap:12px}
+.top-bar .actions button{background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.top-bar .user-badge{background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:12px;margin-left:8px}
+.search-box{padding:12px 16px;background:white;border-bottom:1px solid var(--border);position:sticky;top:68px;z-index:99}
+.search-box input{width:100%;padding:12px 16px 12px 44px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:var(--bg);outline:none}
+.search-box i{position:absolute;left:28px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:16px}
+.filter-bar{padding:10px 16px;background:white;border-bottom:1px solid var(--border);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-bar select,.filter-bar input{padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg);outline:none;min-width:120px}
+.content{padding:12px}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.stat-card .icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.stat-card .icon.blue{background:#e8f4fd;color:var(--primary)}
+.stat-card .icon.green{background:#e8f8f0;color:var(--success)}
+.stat-card .icon.orange{background:#fef5e7;color:var(--accent)}
+.stat-card .icon.red{background:#fdedec;color:var(--danger)}
+.stat-card .value{font-size:22px;font-weight:700;color:var(--text)}
+.stat-card .label{font-size:12px;color:var(--text-light);margin-top:2px}
+.data-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);position:relative;transition:transform 0.15s}
+.data-card:active{transform:scale(0.98)}
+.data-card .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.data-card .card-title{font-size:16px;font-weight:600;color:var(--text)}
+.data-card .card-subtitle{font-size:13px;color:var(--text-light)}
+.data-card .badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-success{background:#e8f8f0;color:var(--success)}
+.badge-warning{background:#fef5e7;color:var(--warning)}
+.badge-danger{background:#fdedec;color:var(--danger)}
+.badge-info{background:#e8f4fd;color:var(--primary)}
+.data-card .card-details{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.data-card .detail-item{font-size:13px}
+.data-card .detail-item .label{color:var(--text-light);font-size:11px}
+.data-card .detail-item .value{color:var(--text);font-weight:600}
+.data-card .card-actions{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.data-card .card-actions button{flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.data-card .card-actions .btn-edit{background:#e8f4fd;color:var(--primary)}
+.data-card .card-actions .btn-delete{background:#fdedec;color:var(--danger)}
+.fab{position:fixed;bottom:90px;left:20px;width:56px;height:56px;background:var(--accent);border:none;border-radius:50%;color:white;font-size:24px;box-shadow:0 4px 16px rgba(230,126,34,0.4);display:flex;align-items:center;justify-content:center;z-index:200;transition:transform 0.2s}
+.fab:active{transform:scale(0.9)}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;justify-content:space-around;padding:8px 0 12px;box-shadow:0 -2px 12px rgba(0,0,0,0.08);z-index:300;border-radius:20px 20px 0 0}
+.bottom-nav .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 12px;border:none;background:none;color:var(--text-light);font-size:11px;transition:color 0.2s;cursor:pointer}
+.bottom-nav .nav-item i{font-size:20px}
+.bottom-nav .nav-item.active{color:var(--primary)}
+.bottom-nav .nav-item.active i{font-weight:900}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;z-index:500}
+.modal-overlay.active{display:flex}
+.modal-sheet{background:var(--card);width:100%;border-radius:24px 24px 0 0;padding:20px;max-height:90vh;overflow-y:auto;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-header h3{font-size:20px}
+.modal-header .close-btn{width:36px;height:36px;border-radius:50%;border:none;background:var(--bg);color:var(--text);font-size:18px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;color:var(--text-light);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;outline:none;background:var(--bg)}
+.form-group input:focus,.form-group select:focus{border-color:var(--primary)}
+.form-group .code-display{background:#e8f4fd;padding:12px 14px;border-radius:12px;font-size:16px;font-weight:700;color:var(--primary);text-align:center;border:2px dashed var(--primary)}
+.btn-primary{width:100%;padding:14px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-success{width:100%;padding:14px;background:var(--success);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-danger{width:100%;padding:14px;background:var(--danger);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;margin-top:8px}
+.btn-warning{width:100%;padding:14px;background:var(--warning);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-info{width:100%;padding:14px;background:var(--info);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-light)}
+.empty-state i{font-size:48px;margin-bottom:12px;opacity:0.4}
+.empty-state p{font-size:15px}
+.fade-in{animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--text);color:white;padding:12px 24px;border-radius:12px;font-size:14px;z-index:600;transition:transform 0.3s ease;box-shadow:var(--shadow)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.vente-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column}
+.vente-screen.active{display:flex}
+.vente-header{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.vente-header h2{font-size:18px}
+.vente-header .back-btn{background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:10px;font-size:18px}
+.vente-body{flex:1;overflow-y:auto;padding:12px}
+.section-client,.section-produits,.section-paiement{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.section-title{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.client-search,.produit-search{position:relative;margin-bottom:10px}
+.client-search input,.produit-search input{width:100%;padding:12px 14px 12px 40px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:var(--bg);outline:none}
+.client-search i,.produit-search i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-light)}
+.client-selected{background:#e8f8f0;border:2px solid var(--success);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.client-selected .name{font-weight:700;color:var(--success)}
+.client-selected .info{font-size:12px;color:var(--text-light)}
+.client-selected .change-btn{background:var(--success);color:white;border:none;padding:6px 12px;border-radius:8px;font-size:12px}
+.client-list,.produit-list{max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;margin-top:8px}
+.client-list-item,.produit-list-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.client-list-item:last-child,.produit-list-item:last-child{border-bottom:none}
+.client-list-item:active,.produit-list-item:active{background:var(--bg)}
+.client-list-item .c-name,.produit-list-item .p-name{font-weight:600}
+.client-list-item .c-phone,.produit-list-item .p-info{font-size:12px;color:var(--text-light)}
+.produit-list-item .p-price{font-weight:700;color:var(--primary)}
+.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.gallery-item{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform 0.15s}
+.gallery-item:active{transform:scale(0.95)}
+.gallery-item .img-box{width:100%;height:100px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.gallery-item .img-box img{width:100%;height:100%;object-fit:cover}
+.gallery-item .img-box .no-img{color:var(--text-light);font-size:24px}
+.gallery-item .info{padding:8px}
+.gallery-item .info .name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-item .info .price{font-size:11px;color:var(--primary);font-weight:700}
+.barcode-input{display:flex;gap:8px;margin-bottom:10px}
+.barcode-input input{flex:1;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:var(--bg);outline:none}
+.barcode-input button{padding:12px 16px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:16px}
+.panier-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.panier-table th{background:var(--primary);color:white;padding:10px;text-align:center;font-size:12px}
+.panier-table td{padding:10px;text-align:center;border-bottom:1px solid var(--border)}
+.panier-table .qty-input{width:50px;padding:6px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px}
+.panier-table .delete-btn{background:var(--danger);color:white;border:none;width:28px;height:28px;border-radius:6px;font-size:12px}
+.total-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border)}
+.total-row .label{font-size:14px;color:var(--text-light)}
+.total-row .value{font-size:16px;font-weight:600}
+.total-row.grand-total{border-bottom:none;padding-top:14px}
+.total-row.grand-total .label{font-size:16px;font-weight:700;color:var(--text)}
+.total-row.grand-total .value{font-size:22px;font-weight:700;color:var(--primary)}
+.paiement-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.paiement-inputs .form-group{margin-bottom:0}
+.paiement-inputs .form-group label{font-size:12px}
+.paiement-inputs .form-group input,.paiement-inputs .form-group select{padding:10px 12px;font-size:14px}
+.reste-display{background:#fff3e0;border:2px solid var(--warning);border-radius:12px;padding:14px;text-align:center;margin-top:12px}
+.reste-display .label{font-size:13px;color:var(--text-light)}
+.reste-display .value{font-size:24px;font-weight:700;color:var(--warning)}
+.reste-display.paye{background:#e8f8f0;border-color:var(--success)}
+.reste-display.paye .value{color:var(--success)}
+.vente-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;background:var(--card);border-top:1px solid var(--border)}
+.vente-tabs{display:flex;gap:8px;margin-bottom:12px;background:var(--card);padding:8px;border-radius:12px}
+.vente-tab{flex:1;padding:10px;border:none;border-radius:10px;background:var(--bg);font-size:13px;text-align:center;color:var(--text-light);cursor:pointer}
+.vente-tab.active{background:var(--primary);color:white;font-weight:600}
+.image-picker{display:flex;gap:8px;align-items:center}
+.image-picker input[type="text"]{flex:1}
+.image-picker button{padding:10px 14px;background:var(--info);color:white;border:none;border-radius:10px;font-size:14px}
+.image-preview{width:80px;height:80px;background:#f0f0f0;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:8px}
+.image-preview img{width:100%;height:100%;object-fit:cover}
+@media print{body *{visibility:hidden}#printReceipt,#printReceipt *{visibility:visible}#printReceipt{position:absolute;left:0;top:0;width:100%}}
+.receipt-58mm{width:58mm;padding:8px;font-family:'Courier New',monospace;font-size:11px;line-height:1.4;color:#000;background:#fff}
+.receipt-58mm .center{text-align:center}
+.receipt-58mm .bold{font-weight:bold}
+.receipt-58mm .line{border-top:1px dashed #000;margin:6px 0}
+.receipt-58mm .item-row{display:flex;justify-content:space-between}
+.receipt-58mm .total-row{display:flex;justify-content:space-between;font-weight:bold}
+.receipt-80mm{width:80mm;padding:12px;font-family:'Courier New',monospace;font-size:12px;line-height:1.5;color:#000;background:#fff}
+.receipt-80mm .center{text-align:center}
+.receipt-80mm .bold{font-weight:bold}
+.receipt-80mm .line{border-top:1px dashed #000;margin:8px 0}
+.receipt-80mm .item-row{display:flex;justify-content:space-between}
+.receipt-80mm .total-row{display:flex;justify-content:space-between;font-weight:bold}
+.print-preview-modal .modal-sheet{max-height:95vh;padding:16px}
+.print-preview-area{border:1px solid #ccc;border-radius:8px;padding:16px;margin:16px 0;background:#fff;overflow:auto;max-height:60vh;display:flex;justify-content:center}
+.print-size-selector{display:flex;gap:10px;margin-bottom:16px}
+.print-size-btn{flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:white;text-align:center;font-size:14px;cursor:pointer}
+.print-size-btn.active{border-color:var(--primary);background:#e8f4fd;color:var(--primary);font-weight:700}
+</style>
+</head>
+<body>
+<div id="loginScreen">
+<div class="logo-box"><i class="fas fa-boxes-stacked"></i></div>
+<h1>ANTIC Distributeur Pro</h1>
+<p>تسجيل الدخول للمتابعة</p>
+<div class="login-form">
+<input type="text" id="loginUser" placeholder="اسم المستخدم">
+<input type="password" id="loginPass" placeholder="كلمة المرور">
+<button onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> دخول</button>
+</div>
+</div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><p>جاري التحميل...</p></div>
+<div class="toast" id="toast"></div>
+<div id="app">
+<div class="top-bar">
+<h2 id="pageTitle">لوحة التحكم</h2>
+<div style="display:flex;align-items:center;">
+<span class="user-badge" id="userBadge">Admin</span>
+<div class="actions">
+<button onclick="refreshData()" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+<button onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+</div>
+</div>
+</div>
+<div class="search-box" id="searchBox" style="display:none;">
+<i class="fas fa-search"></i>
+<input type="text" id="searchInput" placeholder="بحث..." oninput="handleSearch()">
+</div>
+<div class="filter-bar" id="filterBar" style="display:none;">
+<select id="filterDate" onchange="applyFilters()"><option value="">كل التواريخ</option></select>
+<select id="filterUser" onchange="applyFilters()"><option value="">كل المستخدمين</option></select>
+<select id="filterClient" onchange="applyFilters()"><option value="">كل الزبائن</option></select>
+</div>
+<div class="content" id="content"></div>
+<button class="fab" id="fab" onclick="showAddModal()" style="display:none;"><i class="fas fa-plus"></i></button>
+<div class="bottom-nav">
+<button class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')"><i class="fas fa-chart-pie"></i><span>الرئيسية</span></button>
+<button class="nav-item" data-page="stock" onclick="navigateTo('stock')"><i class="fas fa-boxes"></i><span>المخزون</span></button>
+<button class="nav-item" data-page="ventes" onclick="navigateTo('ventes')"><i class="fas fa-shopping-cart"></i><span>المبيعات</span></button>
+<button class="nav-item" data-page="clients" onclick="navigateTo('clients')"><i class="fas fa-users"></i><span>الزبائن</span></button>
+<button class="nav-item" data-page="more" onclick="showMoreMenu()"><i class="fas fa-ellipsis-h"></i><span>المزيد</span></button>
+</div>
+</div>
+<div class="vente-screen" id="venteScreen">
+<div class="vente-header">
+<button class="back-btn" onclick="closeVenteScreen()"><i class="fas fa-arrow-right"></i></button>
+<h2>عملية بيع جديدة</h2>
+<div style="width:36px;"></div>
+</div>
+<div class="vente-body" id="venteBody"></div>
+<div class="vente-actions" id="venteActions">
+<button class="btn-warning" onclick="showPrintPreview()"><i class="fas fa-print"></i> معاينة الوصل</button>
+<button class="btn-success" onclick="saveVente()"><i class="fas fa-save"></i> حفظ العملية</button>
+</div>
+</div>
+<div class="modal-overlay" id="addModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3 id="modalTitle">إضافة جديد</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div id="modalForm"></div>
+</div>
+</div>
+<div class="modal-overlay" id="editModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3 id="editModalTitle">تعديل</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div id="editModalForm"></div>
+</div>
+</div>
+<div class="modal-overlay" id="moreModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3>المزيد</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div style="display:grid;gap:10px;">
+<button class="btn-success" onclick="navigateTo('achats');closeModalDirect()"><i class="fas fa-truck"></i> المشتريات</button>
+<button class="btn-primary" style="background:#8e44ad;" onclick="navigateTo('fournisseurs');closeModalDirect()"><i class="fas fa-industry"></i> الموردين</button>
+<button class="btn-danger" onclick="navigateTo('depenses');closeModalDirect()"><i class="fas fa-money-bill-wave"></i> المصاريف</button>
+<button class="btn-primary" style="background:#34495e;" onclick="navigateTo('users');closeModalDirect()"><i class="fas fa-user-shield"></i> المستخدمين</button>
+<hr style="margin:8px 0;border:none;border-top:1px solid var(--border);">
+<button class="btn-info" onclick="showEntrepriseSettings();closeModalDirect();"><i class="fas fa-building"></i> معلومات الشركة</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay print-preview-modal" id="printModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3>معاينة الوصل</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div class="print-size-selector">
+<button class="print-size-btn active" onclick="setPrintSize('58mm')">58mm</button>
+<button class="print-size-btn" onclick="setPrintSize('80mm')">80mm</button>
+</div>
+<div class="print-preview-area" id="printPreviewArea"></div>
+<button class="btn-primary" onclick="doPrint()"><i class="fas fa-print"></i> طباعة</button>
+<button class="btn-success" style="margin-top:8px;" onclick="saveVenteFromPrint();closeModalDirect()"><i class="fas fa-save"></i> حفظ وطباعة</button>
+</div>
+</div>
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3>التفاصيل</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div id="detailContent"></div>
+</div>
+</div>
+<div class="modal-overlay" id="entrepriseModal" onclick="closeModal(event)">
+<div class="modal-sheet" onclick="event.stopPropagation()">
+<div class="modal-header"><h3>معلومات الشركة</h3><button class="close-btn" onclick="closeModalDirect()"><i class="fas fa-times"></i></button></div>
+<div id="entrepriseForm"></div>
+</div>
+</div>
+<script>
+const API_URL = window.location.origin + '/api';
+let authToken = localStorage.getItem('antic_token') || null;
+async function apiGet(endpoint) {
+  const res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function apiPost(endpoint, data) {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+    body: JSON.stringify(data) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function apiPut(endpoint, data) {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+    body: JSON.stringify(data) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function apiDelete(endpoint) {
+  const res = await fetch(`${API_URL}${endpoint}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+let db = {}, numeros = {}, entreprise = {}, barcodes = {};
+let currentPage = 'dashboard', currentSheet = '', printSize = '58mm';
+let venteClient = null, ventePanier = [], venteNumFacture = '';
+let currentUser = null, editingItem = null, editingSheet = '';
+const SHEETS = {
+  stock: { name: 'stock', icon: 'fa-boxes', title: 'المخزون', color: '#1a5276', prefix: 'PRD' },
+  clients: { name: 'clients', icon: 'fa-users', title: 'الزبائن', color: '#27ae60', prefix: 'CLT' },
+  ventes: { name: 'ventes', icon: 'fa-shopping-cart', title: 'المبيعات', color: '#e67e22', prefix: 'FAC' },
+  achats: { name: 'achats', icon: 'fa-truck', title: 'المشتريات', color: '#8e44ad', prefix: 'BON' },
+  fournisseurs: { name: 'fournisseurs', icon: 'fa-industry', title: 'الموردين', color: '#c0392b', prefix: 'FRN' },
+  depenses: { name: 'depenses', icon: 'fa-money-bill-wave', title: 'المصاريف', color: '#e74c3c', prefix: 'DEP' },
+  users: { name: 'users', icon: 'fa-user-shield', title: 'المستخدمين', color: '#34495e', prefix: 'USR' }
+};
+document.addEventListener('DOMContentLoaded', () => {
+  if (authToken) {
+    loadAllData().then(() => {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').classList.add('active');
+      navigateTo('dashboard');
+    }).catch(() => { localStorage.removeItem('antic_token'); authToken = null; });
+  }
+});
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!user || !pass) { showToast('أدخل اسم المستخدم وكلمة المرور'); return; }
+  document.getElementById('loadingOverlay').classList.add('active');
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }) });
+    if (!res.ok) throw new Error('Erreur');
+    const data = await res.json();
+    authToken = data.token; localStorage.setItem('antic_token', authToken);
+    currentUser = data.user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    document.getElementById('userBadge').textContent = currentUser.username;
+    showToast('مرحبا ' + currentUser.username);
+    await loadAllData(); navigateTo('dashboard');
+  } catch (err) { showToast('اسم المستخدم أو كلمة المرور غير صحيحة'); }
+  finally { document.getElementById('loadingOverlay').classList.remove('active'); }
+}
+function logout() { localStorage.removeItem('antic_token'); authToken = null; location.reload(); }
+async function loadAllData() {
+  const [stock, clients, ventes, achats, fournisseurs, depenses, users, numerosData, entrepriseData] =
+    await Promise.all([
+      apiGet('/stock'), apiGet('/clients'), apiGet('/ventes'), apiGet('/achats'),
+      apiGet('/fournisseurs'), apiGet('/depenses'), apiGet('/users'),
+      apiGet('/numeros'), apiGet('/entreprise')
+    ]);
+  db = { stock, clients, ventes, achats, fournisseurs, depenses, users };
+  numeros = {}; numerosData.forEach(n => { numeros[n.table_name] = n; });
+  entreprise = {}; entrepriseData.forEach(e => { entreprise[e.champ] = e.valeur; });
+  barcodes = {};
+  for (const p of stock) {
+    try { const bars = await apiGet(`/barcode/${p.code}`); if (bars.length > 0) barcodes[p.code] = bars.map(b => b.code_barre); }
+    catch(e) {}
+  }
+}
+async function refreshData() { showToast('جاري التحديث...'); await loadAllData(); navigateTo(currentPage); showToast('تم التحديث'); }
+function showToast(msg) { const toast = document.getElementById('toast'); toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500); }
+function formatNumber(n) { const num = parseFloat(n) || 0; return num.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+function closeModal(e) { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); }
+function closeModalDirect() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+function showMoreMenu() { document.getElementById('moreModal').classList.add('active'); }
+function navigateTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (navItem) navItem.classList.add('active');
+  const searchBox = document.getElementById('searchBox');
+  const fab = document.getElementById('fab');
+  const filterBar = document.getElementById('filterBar');
+  const pageTitle = document.getElementById('pageTitle');
+  searchBox.style.display = 'none'; fab.style.display = 'none'; filterBar.style.display = 'none';
+  document.getElementById('searchInput').value = '';
+  switch (page) {
+    case 'dashboard': pageTitle.textContent = 'لوحة التحكم'; renderDashboard(); break;
+    case 'stock': pageTitle.textContent = 'المخزون'; currentSheet = 'stock'; searchBox.style.display = 'block'; fab.style.display = 'flex'; renderStock(); break;
+    case 'clients': pageTitle.textContent = 'الزبائن'; currentSheet = 'clients'; searchBox.style.display = 'block'; fab.style.display = 'flex'; renderClients(); break;
+    case 'ventes': pageTitle.textContent = 'المبيعات'; currentSheet = 'ventes'; searchBox.style.display = 'block'; renderVentes(); break;
+    case 'achats': pageTitle.textContent = 'المشتريات'; currentSheet = 'achats'; searchBox.style.display = 'block'; fab.style.display = 'flex'; renderAchats(); break;
+    case 'fournisseurs': pageTitle.textContent = 'الموردين'; currentSheet = 'fournisseurs'; searchBox.style.display = 'block'; fab.style.display = 'flex'; renderFournisseurs(); break;
+    case 'depenses': pageTitle.textContent = 'المصاريف'; currentSheet = 'depenses'; searchBox.style.display = 'block'; fab.style.display = 'flex'; renderDepenses(); break;
+    case 'users': pageTitle.textContent = 'المستخدمين'; currentSheet = 'users'; searchBox.style.display = 'block'; renderUsers(); break;
+  }
+}
+function handleSearch() {
+  const filter = document.getElementById('searchInput').value;
+  switch (currentPage) {
+    case 'stock': renderStock(filter); break; case 'clients': renderClients(filter); break;
+    case 'ventes': renderVentes(filter); break; case 'achats': renderAchats(filter); break;
+    case 'fournisseurs': renderFournisseurs(filter); break; case 'depenses': renderDepenses(filter); break;
+    case 'users': renderUsers(filter); break;
+  }
+}
+function applyFilters() {
+  const dateVal = document.getElementById('filterDate').value;
+  const userVal = document.getElementById('filterUser').value;
+  const clientVal = document.getElementById('filterClient').value;
+  if (currentPage === 'ventes') renderVentes('', dateVal, userVal, clientVal);
+}
+function renderDashboard() {
+  const stock = db.stock || [], ventes = db.ventes || [], clients = db.clients || [], depenses = db.depenses || [];
+  let userVentes = ventes;
+  if (currentUser && currentUser.role === 'Vendeur') userVentes = ventes.filter(v => v.vendeur === currentUser.username);
+  const totalStock = stock.reduce((s, p) => s + (parseFloat(p.quantite) || 0), 0);
+  const totalVentes = userVentes.reduce((s, v) => s + (parseFloat(v.total) || 0), 0);
+  const totalClients = clients.length;
+  const totalDepenses = depenses.reduce((s, d) => s + (parseFloat(d.montant) || 0), 0);
+  const lowStock = stock.filter(p => (parseFloat(p.quantite) || 0) <= (parseFloat(p.seuil_alert) || 0));
+  let html = `<div style="display:grid;gap:10px;margin-bottom:16px;"><button class="btn-success" style="border-radius:14px;padding:18px;font-size:18px;" onclick="openVenteScreen()"><i class="fas fa-shopping-cart"></i> عملية بيع جديدة</button></div>`;
+  html += `<div class="stats-grid fade-in"><div class="stat-card"><div class="icon blue"><i class="fas fa-boxes"></i></div><div class="value">${totalStock}</div><div class="label">إجمالي المخزون</div></div><div class="stat-card"><div class="icon green"><i class="fas fa-coins"></i></div><div class="value">${formatNumber(totalVentes)} DA</div><div class="label">${currentUser && currentUser.role === 'Vendeur' ? 'مبيعاتي' : 'إجمالي المبيعات'}</div></div><div class="stat-card"><div class="icon orange"><i class="fas fa-users"></i></div><div class="value">${totalClients}</div><div class="label">عدد الزبائن</div></div><div class="stat-card"><div class="icon red"><i class="fas fa-money-bill-wave"></i></div><div class="value">${formatNumber(totalDepenses)} DA</div><div class="label">إجمالي المصاريف</div></div></div>`;
+  html += `<h3 style="margin:16px 0 10px;font-size:16px;">مخزون منخفض</h3>`;
+  if (lowStock.length === 0) html += `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success);"></i><p>لا توجد منتجات منخفضة</p></div>`;
+  else lowStock.forEach(p => { html += `<div class="data-card fade-in" onclick="navigateTo('stock')"><div class="card-header"><div><div class="card-title">${p.nom || p.code || ''}</div><div class="card-subtitle">${p.categorie || ''}</div></div><span class="badge badge-danger">${p.quantite || 0} وحدة</span></div><div class="card-details"><div class="detail-item"><div class="label">الحد الأدنى</div><div class="value">${p.seuil_alert || 0}</div></div><div class="detail-item"><div class="label">الموقع</div><div class="value">${p.emplacement || ''}</div></div></div></div>`; });
+  html += `<h3 style="margin:20px 0 10px;font-size:16px;">آخر المبيعات</h3>`;
+  const lastVentes = userVentes.slice(-5).reverse();
+  if (lastVentes.length === 0) html += `<div class="empty-state"><i class="fas fa-receipt"></i><p>لا توجد مبيعات</p></div>`;
+  else lastVentes.forEach(v => { html += `<div class="data-card fade-in"><div class="card-header"><div><div class="card-title">${v.num_facture || ''}</div><div class="card-subtitle">${v.nom_client || ''} · ${v.date || ''}</div></div><span class="badge badge-success">${formatNumber(v.total || 0)} DA</span></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+function renderStock(filter = '') {
+  const data = db.stock || [];
+  const filtered = filter ? data.filter(p => (p.nom || '').toLowerCase().includes(filter.toLowerCase()) || (p.code || '').toLowerCase().includes(filter.toLowerCase()) || (p.categorie || '').toLowerCase().includes(filter.toLowerCase())) : data;
+  let html = '';
+  if (filtered.length === 0) html = `<div class="empty-state"><i class="fas fa-box-open"></i><p>لا توجد منتجات</p></div>`;
+  else filtered.forEach(p => { const qte = parseFloat(p.quantite) || 0; const seuil = parseFloat(p.seuil_alert) || 0; const isLow = qte <= seuil; const img = p.image_url || ''; html += `<div class="data-card fade-in"><div class="card-header"><div style="display:flex;align-items:center;gap:10px;"><div style="width:50px;height:50px;background:#f0f0f0;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${img ? `<img src="${img}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-image\' style=\'color:var(--text-light);\'></i>'">` : '<i class="fas fa-image" style="color:var(--text-light);"></i>'}</div><div><div class="card-title">${p.nom || ''}</div><div class="card-subtitle">${p.code || ''} · ${p.categorie || ''}</div></div></div><span class="badge ${isLow ? 'badge-danger' : 'badge-success'}">${qte} وحدة</span></div><div class="card-details"><div class="detail-item"><div class="label">سعر الشراء</div><div class="value">${formatNumber(p.prix_achat || 0)} DA</div></div><div class="detail-item"><div class="label">سعر البيع</div><div class="value">${formatNumber(p.prix_vente || 0)} DA</div></div><div class="detail-item"><div class="label">المورد</div><div class="value">${p.fournisseur || ''}</div></div><div class="detail-item"><div class="label">الموقع</div><div class="value">${p.emplacement || ''}</div></div></div><div class="card-actions"><button class="btn-edit" onclick="event.stopPropagation();editItem('stock',${p.id})"><i class="fas fa-edit"></i> تعديل</button><button class="btn-delete" onclick="event.stopPropagation();deleteItem('stock',${p.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+function renderClients(filter = '') {
+  const data = db.clients || [];
+  const filtered = filter ? data.filter(c => (c.nom || '').toLowerCase().includes(filter.toLowerCase()) || (c.telephone || '').includes(filter) || (c.ville || '').toLowerCase().includes(filter.toLowerCase())) : data;
+  let html = '';
+  if (filtered.length === 0) html = `<div class="empty-state"><i class="fas fa-user-slash"></i><p>لا يوجد زبائن</p></div>`;
+  else filtered.forEach(c => { html += `<div class="data-card fade-in" onclick="showDetail('clients',${c.id || 0})"><div class="card-header"><div><div class="card-title">${c.nom || ''}</div><div class="card-subtitle">${c.telephone || ''}</div></div><span class="badge badge-info">${c.type || ''}</span></div><div class="card-details"><div class="detail-item"><div class="label">المدينة</div><div class="value">${c.ville || ''}</div></div><div class="detail-item"><div class="label">الولاية</div><div class="value">${c.wilaya || ''}</div></div><div class="detail-item"><div class="label">الرصيد</div><div class="value">${formatNumber(c.solde || 0)} DA</div></div><div class="detail-item"><div class="label">الإيميل</div><div class="value" style="font-size:11px;">${c.email || '-'}</div></div></div><div class="card-actions"><button class="btn-edit" onclick="event.stopPropagation();editItem('clients',${c.id})"><i class="fas fa-edit"></i> تعديل</button><button class="btn-delete" onclick="event.stopPropagation();deleteItem('clients',${c.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+function renderVentes(filter = '', dateFilter = '', userFilter = '', clientFilter = '') {
+  let data = db.ventes || [];
+  if (currentUser && currentUser.role === 'Vendeur') data = data.filter(v => v.vendeur === currentUser.username);
+  if (filter) data = data.filter(v => (v.num_facture || '').toLowerCase().includes(filter.toLowerCase()) || (v.nom_client || '').toLowerCase().includes(filter.toLowerCase()));
+  if (dateFilter) data = data.filter(v => v.date === dateFilter);
+  if (userFilter) data = data.filter(v => v.vendeur === userFilter);
+  if (clientFilter) data = data.filter(v => v.nom_client === clientFilter);
+  let html = '';
+  if (data.length === 0) html = `<div class="empty-state"><i class="fas fa-receipt"></i><p>لا توجد مبيعات</p></div>`;
+  else {
+    const grouped = {};
+    data.forEach(v => { if (!grouped[v.num_facture]) grouped[v.num_facture] = []; grouped[v.num_facture].push(v); });
+    Object.entries(grouped).forEach(([num, items]) => { const total = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0); const first = items[0]; html += `<div class="data-card fade-in" onclick="showDetail('ventes','${num}')"><div class="card-header"><div><div class="card-title">${num}</div><div class="card-subtitle">${first.nom_client || ''} · ${first.date || ''} · ${first.vendeur || ''}</div></div><span class="badge ${first.statut === 'Payée' ? 'badge-success' : 'badge-warning'}">${first.statut || ''}</span></div><div class="card-details"><div class="detail-item"><div class="label">المنتجات</div><div class="value">${items.length}</div></div><div class="detail-item"><div class="label">الإجمالي</div><div class="value">${formatNumber(total)} DA</div></div><div class="detail-item"><div class="label">الدفع</div><div class="value">${first.mode_paiement || ''}</div></div><div class="detail-item"><div class="label">المبلغ المدفوع</div><div class="value">${formatNumber(first.montant_paye || 0)}</div></div></div><div class="card-actions"><button class="btn-delete" onclick="event.stopPropagation();deleteVente('${num}')"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  }
+  document.getElementById('content').innerHTML = html;
+}
+function renderAchats(filter = '') {
+  let data = db.achats || [];
+  if (filter) data = data.filter(a => (a.num_bon || '').toLowerCase().includes(filter.toLowerCase()) || (a.nom_fournisseur || '').toLowerCase().includes(filter.toLowerCase()));
+  let html = '';
+  if (data.length === 0) html = `<div class="empty-state"><i class="fas fa-truck-loading"></i><p>لا توجد مشتريات</p></div>`;
+  else {
+    const grouped = {};
+    data.forEach(a => { if (!grouped[a.num_bon]) grouped[a.num_bon] = []; grouped[a.num_bon].push(a); });
+    Object.entries(grouped).forEach(([num, items]) => { const total = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0); const first = items[0]; html += `<div class="data-card fade-in"><div class="card-header"><div><div class="card-title">${num}</div><div class="card-subtitle">${first.nom_fournisseur || ''} · ${first.date || ''}</div></div><span class="badge ${first.statut === 'Reçu' ? 'badge-success' : 'badge-warning'}">${first.statut || ''}</span></div><div class="card-details"><div class="detail-item"><div class="label">المنتجات</div><div class="value">${items.length}</div></div><div class="detail-item"><div class="label">الإجمالي</div><div class="value">${formatNumber(total)} DA</div></div><div class="detail-item"><div class="label">الدفع</div><div class="value">${first.mode_paiement || ''}</div></div><div class="detail-item"><div class="label">المسؤول</div><div class="value">${first.responsable || ''}</div></div></div><div class="card-actions"><button class="btn-delete" onclick="event.stopPropagation();deleteAchat('${num}')"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  }
+  document.getElementById('content').innerHTML = html;
+}
+function renderFournisseurs(filter = '') {
+  const data = db.fournisseurs || [];
+  const filtered = filter ? data.filter(f => (f.nom || '').toLowerCase().includes(filter.toLowerCase()) || (f.telephone || '').includes(filter)) : data;
+  let html = '';
+  if (filtered.length === 0) html = `<div class="empty-state"><i class="fas fa-industry"></i><p>لا يوجد موردين</p></div>`;
+  else filtered.forEach(f => { html += `<div class="data-card fade-in"><div class="card-header"><div><div class="card-title">${f.nom || ''}</div><div class="card-subtitle">${f.telephone || ''}</div></div><span class="badge badge-info">${f.type || ''}</span></div><div class="card-details"><div class="detail-item"><div class="label">المدينة</div><div class="value">${f.ville || ''}</div></div><div class="detail-item"><div class="label">الولاية</div><div class="value">${f.wilaya || ''}</div></div><div class="detail-item"><div class="label">الرصيد</div><div class="value">${formatNumber(f.solde || 0)} DA</div></div><div class="detail-item"><div class="label">الإيميل</div><div class="value" style="font-size:11px;">${f.email || '-'}</div></div></div><div class="card-actions"><button class="btn-edit" onclick="event.stopPropagation();editItem('fournisseurs',${f.id})"><i class="fas fa-edit"></i> تعديل</button><button class="btn-delete" onclick="event.stopPropagation();deleteItem('fournisseurs',${f.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+function renderDepenses(filter = '') {
+  const data = db.depenses || [];
+  const filtered = filter ? data.filter(d => (d.categorie || '').toLowerCase().includes(filter.toLowerCase()) || (d.description || '').toLowerCase().includes(filter.toLowerCase())) : data;
+  let html = '';
+  if (filtered.length === 0) html = `<div class="empty-state"><i class="fas fa-hand-holding-usd"></i><p>لا توجد مصاريف</p></div>`;
+  else filtered.forEach(d => { html += `<div class="data-card fade-in"><div class="card-header"><div><div class="card-title">${d.categorie || ''}</div><div class="card-subtitle">${d.description || ''} · ${d.date || ''}</div></div><span class="badge badge-danger">${formatNumber(d.montant || 0)} DA</span></div><div class="card-details"><div class="detail-item"><div class="label">الدفع</div><div class="value">${d.mode_paiement || ''}</div></div><div class="detail-item"><div class="label">المستفيد</div><div class="value">${d.beneficiaire || ''}</div></div><div class="detail-item"><div class="label">الحالة</div><div class="value">${d.statut || ''}</div></div><div class="detail-item"><div class="label">المسؤول</div><div class="value">${d.responsable || ''}</div></div></div><div class="card-actions"><button class="btn-edit" onclick="event.stopPropagation();editItem('depenses',${d.id})"><i class="fas fa-edit"></i> تعديل</button><button class="btn-delete" onclick="event.stopPropagation();deleteItem('depenses',${d.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+function renderUsers(filter = '') {
+  const data = db.users || [];
+  const filtered = filter ? data.filter(u => (u.nom_utilisateur || '').toLowerCase().includes(filter.toLowerCase()) || (u.role || '').toLowerCase().includes(filter.toLowerCase())) : data;
+  let html = '';
+  if (filtered.length === 0) html = `<div class="empty-state"><i class="fas fa-user-shield"></i><p>لا يوجد مستخدمين</p></div>`;
+  else filtered.forEach(u => { html += `<div class="data-card fade-in"><div class="card-header"><div><div class="card-title">${u.nom_utilisateur || ''}</div><div class="card-subtitle">${u.email || ''}</div></div><span class="badge ${u.actif === 'Oui' ? 'badge-success' : 'badge-danger'}">${u.role || ''}</span></div><div class="card-details"><div class="detail-item"><div class="label">الهاتف</div><div class="value">${u.telephone || ''}</div></div><div class="detail-item"><div class="label">الحالة</div><div class="value">${u.actif || ''}</div></div><div class="detail-item"><div class="label">تاريخ الإنشاء</div><div class="value">${u.date_creation || ''}</div></div><div class="detail-item"><div class="label">آخر دخول</div><div class="value">${u.derniere_connexion || ''}</div></div></div><div class="card-actions"><button class="btn-edit" onclick="event.stopPropagation();editItem('users',${u.id})"><i class="fas fa-edit"></i> تعديل</button><button class="btn-delete" onclick="event.stopPropagation();deleteItem('users',${u.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`; });
+  document.getElementById('content').innerHTML = html;
+}
+async function generateCode(table) {
+  try { const res = await apiPost('/numeros/generate', { table_name: table }); return res.code; }
+  catch (err) { showToast('خطأ في توليد الكود'); return ''; }
+}
+function showAddModal() {
+  const modal = document.getElementById('addModal');
+  const title = document.getElementById('modalTitle');
+  const form = document.getElementById('modalForm');
+  let fields = [];
+  switch (currentSheet) {
+    case 'stock':
+      title.textContent = 'إضافة منتج';
+      fields = [
+        { label: 'الكود التلقائي', name: 'code', type: 'display', value: '' },
+        { label: 'الاسم', name: 'nom', type: 'text' },
+        { label: 'الفئة', name: 'categorie', type: 'text' },
+        { label: 'الكمية', name: 'quantite', type: 'number' },
+        { label: 'سعر الشراء', name: 'prix_achat', type: 'number' },
+        { label: 'سعر البيع', name: 'prix_vente', type: 'number' },
+        { label: 'الحد الأدنى', name: 'seuil_alert', type: 'number' },
+        { label: 'المورد', name: 'fournisseur', type: 'text' },
+        { label: 'الموقع', name: 'emplacement', type: 'text' },
+        { label: 'رابط الصورة', name: 'image_url', type: 'text' },
+      ]; break;
+    case 'clients':
+      title.textContent = 'إضافة زبون';
+      fields = [
+        { label: 'الكود التلقائي', name: 'code', type: 'display', value: '' },
+        { label: 'الاسم', name: 'nom', type: 'text' },
+        { label: 'الهاتف', name: 'telephone', type: 'tel' },
+        { label: 'الإيميل', name: 'email', type: 'email' },
+        { label: 'العنوان', name: 'adresse', type: 'text' },
+        { label: 'المدينة', name: 'ville', type: 'text' },
+        { label: 'الولاية', name: 'wilaya', type: 'text' },
+        { label: 'النوع', name: 'type', type: 'select', options: ['Grossiste', 'Détaillant'] },
+      ]; break;
+    case 'fournisseurs':
+      title.textContent = 'إضافة مورد';
+      fields = [
+        { label: 'الكود التلقائي', name: 'code', type: 'display', value: '' },
+        { label: 'الاسم', name: 'nom', type: 'text' },
+        { label: 'الهاتف', name: 'telephone', type: 'tel' },
+        { label: 'الإيميل', name: 'email', type: 'email' },
+        { label: 'العنوان', name: 'adresse', type: 'text' },
+        { label: 'المدينة', name: 'ville', type: 'text' },
+        { label: 'الولاية', name: 'wilaya', type: 'text' },
+        { label: 'النوع', name: 'type', type: 'select', options: ['Principal', 'Secondaire', 'Occasionnel'] },
+      ]; break;
+    case 'depenses':
+      title.textContent = 'إضافة مصروف';
+      fields = [
+        { label: 'الكود التلقائي', name: 'num_depense', type: 'display', value: '' },
+        { label: 'التاريخ', name: 'date', type: 'date' },
+        { label: 'الفئة', name: 'categorie', type: 'text' },
+        { label: 'الوصف', name: 'description', type: 'text' },
+        { label: 'المبلغ', name: 'montant', type: 'number' },
+        { label: 'طريقة الدفع', name: 'mode_paiement', type: 'select', options: ['Espèce', 'Chèque', 'Virement'] },
+        { label: 'المستفيد', name: 'beneficiaire', type: 'text' },
+      ]; break;
+    case 'achats':
+      title.textContent = 'إضافة مشتريات';
+      fields = [
+        { label: 'رقم البون التلقائي', name: 'num_bon', type: 'display', value: '' },
+        { label: 'التاريخ', name: 'date', type: 'date' },
+        { label: 'كود المورد', name: 'code_fournisseur', type: 'text' },
+        { label: 'اسم المورد', name: 'nom_fournisseur', type: 'text' },
+        { label: 'كود المنتج', name: 'code_produit', type: 'text' },
+        { label: 'اسم المنتج', name: 'nom_produit', type: 'text' },
+        { label: 'الكمية', name: 'quantite', type: 'number' },
+        { label: 'سعر الشراء', name: 'prix_achat', type: 'number' },
+        { label: 'طريقة الدفع', name: 'mode_paiement', type: 'select', options: ['Espèce', 'Chèque', 'Virement'] },
+      ]; break;
+    case 'users':
+      title.textContent = 'إضافة مستخدم';
+      fields = [
+        { label: 'اسم المستخدم', name: 'nom_utilisateur', type: 'text' },
+        { label: 'كلمة المرور', name: 'mot_de_passe', type: 'password' },
+        { label: 'الدور', name: 'role', type: 'select', options: ['Administrateur', 'Vendeur', 'Comptable', 'Manager'] },
+        { label: 'الإيميل', name: 'email', type: 'email' },
+        { label: 'الهاتف', name: 'telephone', type: 'tel' },
+      ]; break;
+    default: showToast('الإضافة غير متاحة هنا'); return;
+  }
+  let html = '<form onsubmit="handleAddSubmit(event)">';
+  fields.forEach(f => {
+    if (f.type === 'display') {
+      html += `<div class="form-group"><label>${f.label}</label><div class="code-display" id="disp_${f.name}">...</div><input type="hidden" name="${f.name}" id="inp_${f.name}"></div>`;
+    } else if (f.type === 'select') {
+      html += `<div class="form-group"><label>${f.label}</label><select name="${f.name}">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>`;
+    } else {
+      html += `<div class="form-group"><label>${f.label}</label><input type="${f.type}" name="${f.name}" required></div>`;
+    }
+  });
+  html += '<button type="submit" class="btn-primary">حفظ</button></form>';
+  form.innerHTML = html;
+  modal.classList.add('active');
+  const mapPrefix = { stock: 'STOCK', clients: 'CLIENT', fournisseurs: 'FOURNISSEUR', depenses: 'DEPENSES', achats: 'ACHAT', users: 'USERS' };
+  const prefix = mapPrefix[currentSheet];
+  if (prefix) {
+    generateCode(prefix).then(code => {
+      const disp = document.getElementById('disp_code') || document.getElementById('disp_num_depense') || document.getElementById('disp_num_bon');
+      const inp = document.getElementById('inp_code') || document.getElementById('inp_num_depense') || document.getElementById('inp_num_bon');
+      if (disp) disp.textContent = code;
+      if (inp) inp.value = code;
+    });
+  }
+}
+async function handleAddSubmit(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = {}; formData.forEach((v, k) => data[k] = v);
+  if (currentSheet === 'achats' || currentSheet === 'depenses') data.responsable = currentUser ? currentUser.username : 'Admin';
+  try {
+    await apiPost(`/${currentSheet}`, data);
+    showToast('تمت الإضافة بنجاح'); closeModalDirect(); await refreshData();
+  } catch (err) { showToast('خطأ: ' + err.message); }
+}
+function editItem(sheet, id) {
+  editingSheet = sheet;
+  editingItem = db[sheet].find(r => r.id == id);
+  if (!editingItem) return;
+  const modal = document.getElementById('editModal');
+  const title = document.getElementById('editModalTitle');
+  const form = document.getElementById('editModalForm');
+  title.textContent = 'تعديل ' + (SHEETS[sheet]?.title || '');
+  let html = '<form onsubmit="handleEditSubmit(event)">';
+  Object.entries(editingItem).forEach(([k, v]) => {
+    if (k === 'id' || k === 'date_ajout' || k === 'derniere_connexion' || k === 'mot_de_passe') return;
+    html += `<div class="form-group"><label>${k}</label><input type="text" name="${k}" value="${v || ''}"></div>`;
+  });
+  html += '<button type="submit" class="btn-primary">حفظ التعديلات</button></form>';
+  form.innerHTML = html;
+  modal.classList.add('active');
+}
+async function handleEditSubmit(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = {}; formData.forEach((v, k) => data[k] = v);
+  try {
+    await apiPut(`/${editingSheet}/${editingItem.id}`, data);
+    showToast('تم التعديل بنجاح'); closeModalDirect(); await refreshData();
+  } catch (err) { showToast('خطأ في التعديل: ' + err.message); }
+}
+async function deleteItem(sheet, id) {
+  if (!confirm('هل أنت متأكد من الحذف؟')) return;
+  try { await apiDelete(`/${sheet}/${id}`); showToast('تم الحذف'); await refreshData(); }
+  catch (err) { showToast('خطأ في الحذف: ' + err.message); }
+}
+async function deleteVente(num) {
+  if (!confirm('هل أنت متأكد من حذف الفاتورة ' + num + '؟')) return;
+  try { await apiDelete(`/ventes/${num}`); showToast('تم حذف الفاتورة'); await refreshData(); }
+  catch (err) { showToast('خطأ: ' + err.message); }
+}
+async function deleteAchat(num) {
+  if (!confirm('هل أنت متأكد من حذف البون ' + num + '؟')) return;
+  try { await apiDelete(`/achats/${num}`); showToast('تم حذف البون'); await refreshData(); }
+  catch (err) { showToast('خطأ: ' + err.message); }
+}
+function showDetail(sheet, id) {
+  const modal = document.getElementById('detailModal');
+  const content = document.getElementById('detailContent');
+  const data = db[sheet] || [];
+  let html = '';
+  if (sheet === 'ventes') {
+    const items = data.filter(v => v.num_facture === id);
+    if (items.length === 0) return;
+    const total = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+    html = `<h3 style="margin-bottom:16px;">فاتورة: ${id}</h3>`;
+    html += `<table class="panier-table"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>المجموع</th></tr></thead><tbody>`;
+    items.forEach(i => { html += `<tr><td>${i.nom_produit || ''}</td><td>${i.quantite || 0}</td><td>${formatNumber(i.prix_unitaire || 0)}</td><td>${formatNumber(i.total || 0)}</td></tr>`; });
+    html += `</tbody></table>`;
+    html += `<div style="margin-top:16px;text-align:left;font-size:18px;font-weight:700;">الإجمالي: ${formatNumber(total)} DA</div>`;
+  } else {
+    const item = data.find(r => r.id == id);
+    if (!item) return;
+    html = '<div style="display:grid;gap:12px;">';
+    Object.entries(item).forEach(([k, v]) => { html += `<div style="display:flex;justify-content:space-between;padding:10px;background:#f8f9fa;border-radius:10px;"><span style="color:var(--text-light);font-size:13px;">${k}</span><span style="font-weight:600;">${v || '-'}</span></div>`; });
+    html += '</div>';
+  }
+  content.innerHTML = html;
+  modal.classList.add('active');
+}
+function showEntrepriseSettings() {
+  const modal = document.getElementById('entrepriseModal');
+  const form = document.getElementById('entrepriseForm');
+  const fields = ['Nom', 'Adresse', 'Telephone', 'Email', 'RC', 'NIF', 'NIS', 'AI'];
+  const labels = { Nom: 'اسم الشركة', Adresse: 'العنوان', Telephone: 'الهاتف', Email: 'الإيميل', RC: 'رقم السجل التجاري', NIF: 'NIF', NIS: 'NIS', AI: 'AI' };
+  let html = '<form onsubmit="saveEntreprise(event)">';
+  fields.forEach(f => { html += `<div class="form-group"><label>${labels[f]}</label><input type="text" name="${f}" value="${entreprise[f] || ''}"></div>`; });
+  html += '<button type="submit" class="btn-primary">حفظ معلومات الشركة</button></form>';
+  form.innerHTML = html;
+  modal.classList.add('active');
+}
+async function saveEntreprise(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = {}; formData.forEach((v, k) => data[k] = v);
+  try { await apiPut('/entreprise', data); showToast('تم حفظ معلومات الشركة'); closeModalDirect(); await refreshData(); }
+  catch (err) { showToast('خطأ: ' + err.message); }
+}
+let venteTab = 'list';
+function openVenteScreen() {
+  venteClient = null; ventePanier = [];
+  generateCode('VENTES').then(code => { venteNumFacture = code; document.getElementById('venteScreen').classList.add('active'); renderVenteInterface(); });
+}
+function closeVenteScreen() { document.getElementById('venteScreen').classList.remove('active'); }
+function renderVenteInterface() {
+  const body = document.getElementById('venteBody');
+  let html = '';
+  html += `<div class="section-client"><div class="section-title"><i class="fas fa-user"></i> 1. اختيار الزبون</div>`;
+  if (venteClient) {
+    html += `<div class="client-selected"><div><div class="name">${venteClient.nom}</div><div class="info">${venteClient.telephone} · ${venteClient.ville || ''}</div></div><button class="change-btn" onclick="changeVenteClient()">تغيير</button></div>`;
+  } else {
+    html += `<div class="client-search"><i class="fas fa-search"></i><input type="text" id="venteClientSearch" placeholder="ابحث عن زبون..." oninput="searchVenteClients()"></div>`;
+    html += `<div class="client-list" id="venteClientList"></div>`;
+  }
+  html += `</div>`;
+  html += `<div class="section-produits"><div class="section-title"><i class="fas fa-boxes"></i> 2. اختيار المنتجات</div>`;
+  html += `<div class="vente-tabs"><button class="vente-tab ${venteTab === 'list' ? 'active' : ''}" onclick="setVenteTab('list')">قائمة</button><button class="vente-tab ${venteTab === 'gallery' ? 'active' : ''}" onclick="setVenteTab('gallery')">معرض</button><button class="vente-tab ${venteTab === 'barcode' ? 'active' : ''}" onclick="setVenteTab('barcode')">باركود</button></div>`;
+  if (venteTab === 'list') {
+    html += `<div class="produit-search"><i class="fas fa-search"></i><input type="text" id="venteProduitSearch" placeholder="ابحث عن منتج بالاسم..." oninput="searchVenteProduits()"></div>`;
+    html += `<div class="produit-list" id="venteProduitList"></div>`;
+  } else if (venteTab === 'gallery') {
+    html += renderProductGallery();
+  } else if (venteTab === 'barcode') {
+    html += `<div class="barcode-input"><input type="text" id="barcodeInput" placeholder="امسح الباركود أو اكتبه..." onkeydown="if(event.key==='Enter')scanBarcode()"><button onclick="scanBarcode()"><i class="fas fa-barcode"></i></button></div>`;
+    html += `<div id="barcodeResult" style="margin-top:10px;"></div>`;
+  }
+  if (ventePanier.length > 0) {
+    html += `<table class="panier-table"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>المجموع</th><th></th></tr></thead><tbody>`;
+    ventePanier.forEach((item, idx) => {
+      html += `<tr><td style="text-align:right;">${item.nom}</td><td><input type="number" class="qty-input" value="${item.quantite}" min="1" onchange="updatePanierQty(${idx},this.value)"></td><td>${formatNumber(item.prix_unitaire)}</td><td>${formatNumber(item.total)}</td><td><button class="delete-btn" onclick="removeFromPanier(${idx})"><i class="fas fa-trash"></i></button></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+  const total = ventePanier.reduce((s, i) => s + i.total, 0);
+  html += `<div class="section-paiement"><div class="section-title"><i class="fas fa-money-bill-wave"></i> 3. الدفع</div>`;
+  html += `<div class="total-row grand-total"><span class="label">الإجمالي</span><span class="value">${formatNumber(total)} DA</span></div>`;
+  html += `<div class="paiement-inputs"><div class="form-group"><label>طريقة الدفع</label><select id="venteModePaiement"><option value="Espèce">نقدي</option><option value="Chèque">شيك</option><option value="Virement">تحويل</option></select></div><div class="form-group"><label>المبلغ المدفوع</label><input type="number" id="venteMontantPaye" value="${Math.round(total)}" oninput="updateReste()"></div></div>`;
+  const montantPaye = parseFloat(document.getElementById('venteMontantPaye')?.value) || 0;
+  const reste = total - montantPaye;
+  html += `<div class="reste-display ${reste <= 0 ? 'paye' : ''}" id="resteDisplay"><div class="label">${reste <= 0 ? 'المتبقي (صفر)' : 'المتبقي للزبون'}</div><div class="value">${formatNumber(Math.abs(reste))} DA</div></div>`;
+  html += `</div>`;
+  body.innerHTML = html;
+  setTimeout(() => { const mp = document.getElementById('venteMontantPaye'); if (mp) mp.addEventListener('input', updateReste); }, 10);
+}
+function setVenteTab(tab) { venteTab = tab; renderVenteInterface(); }
+function renderProductGallery() {
+  const stock = db.stock || [];
+  let html = '<div class="gallery-grid">';
+  stock.forEach(p => {
+    const qte = parseFloat(p.quantite) || 0;
+    if (qte <= 0) return;
+    const img = p.image_url || '';
+    html += `<div class="gallery-item" onclick="addToPanier('${p.code}')"><div class="img-box">${img ? `<img src="${img}" onerror="this.parentElement.innerHTML='<i class=\'fas fa-image no-img\'></i>'">` : '<i class="fas fa-image no-img"></i>'}</div><div class="info"><div class="name">${p.nom}</div><div class="price">${formatNumber(p.prix_vente || 0)} DA</div></div></div>`;
+  });
+  html += '</div>';
+  return html;
+}
+async function scanBarcode() {
+  const code = document.getElementById('barcodeInput').value.trim();
+  if (!code) return;
+  try {
+    const prod = await apiGet(`/barcode/scan/${code}`);
+    if (prod) { addToPanier(prod.code_produit); document.getElementById('barcodeInput').value = ''; document.getElementById('barcodeResult').innerHTML = `<div style="background:#e8f8f0;padding:10px;border-radius:8px;color:var(--success);"><i class="fas fa-check"></i> تم إضافة المنتج</div>`; }
+    else { document.getElementById('barcodeResult').innerHTML = `<div style="background:#fdedec;padding:10px;border-radius:8px;color:var(--danger);"><i class="fas fa-times"></i> منتج غير موجود</div>`; }
+  } catch (err) { document.getElementById('barcodeResult').innerHTML = `<div style="background:#fdedec;padding:10px;border-radius:8px;color:var(--danger);"><i class="fas fa-times"></i> خطأ في البحث</div>`; }
+  setTimeout(() => document.getElementById('barcodeResult').innerHTML = '', 2000);
+}
+function searchVenteClients() {
+  const filter = document.getElementById('venteClientSearch').value.toLowerCase();
+  const clients = db.clients || [];
+  const filtered = clients.filter(c => (c.nom || '').toLowerCase().includes(filter) || (c.telephone || '').includes(filter));
+  const list = document.getElementById('venteClientList');
+  if (filter.length < 2) { list.innerHTML = ''; return; }
+  let html = '';
+  filtered.forEach(c => { html += `<div class="client-list-item" onclick="selectVenteClient(${c.id})"><div><div class="c-name">${c.nom}</div><div class="c-phone">${c.telephone}</div></div><span style="color:var(--primary);font-size:12px;">${c.ville || ''}</span></div>`; });
+  list.innerHTML = html;
+}
+function selectVenteClient(id) { venteClient = db.clients.find(c => c.id == id); renderVenteInterface(); }
+function changeVenteClient() { venteClient = null; renderVenteInterface(); }
+function searchVenteProduits() {
+  const filter = document.getElementById('venteProduitSearch').value.toLowerCase();
+  const stock = db.stock || [];
+  const filtered = stock.filter(p => (p.nom || '').toLowerCase().includes(filter) || (p.code || '').toLowerCase().includes(filter));
+  const list = document.getElementById('venteProduitList');
+  if (filter.length < 2) { list.innerHTML = ''; return; }
+  let html = '';
+  filtered.forEach(p => { const qte = parseFloat(p.quantite) || 0; if (qte <= 0) return; html += `<div class="produit-list-item" onclick="addToPanier('${p.code}')"><div><div class="p-name">${p.nom}</div><div class="p-info">${p.code} · متوفر: ${qte}</div></div><div class="p-price">${formatNumber(p.prix_vente || 0)} DA</div></div>`; });
+  list.innerHTML = html;
+}
+function addToPanier(code) {
+  const prod = db.stock.find(p => p.code === code);
+  if (!prod) return;
+  const prix = parseFloat(prod.prix_vente) || 0;
+  const existing = ventePanier.find(i => i.code_produit === code);
+  if (existing) { existing.quantite += 1; existing.total = existing.quantite * existing.prix_unitaire; }
+  else { ventePanier.push({ code_produit: code, nom: prod.nom, quantite: 1, prix_unitaire: prix, total: prix }); }
+  if (document.getElementById('venteProduitSearch')) document.getElementById('venteProduitSearch').value = '';
+  if (document.getElementById('venteProduitList')) document.getElementById('venteProduitList').innerHTML = '';
+  renderVenteInterface();
+}
+function updatePanierQty(idx, qty) {
+  const q = parseInt(qty) || 1;
+  if (q < 1) return;
+  ventePanier[idx].quantite = q;
+  ventePanier[idx].total = q * ventePanier[idx].prix_unitaire;
+  renderVenteInterface();
+}
+function removeFromPanier(idx) { ventePanier.splice(idx, 1); renderVenteInterface(); }
+function updateReste() {
+  const total = ventePanier.reduce((s, i) => s + i.total, 0);
+  const montantPaye = parseFloat(document.getElementById('venteMontantPaye').value) || 0;
+  const reste = total - montantPaye;
+  const display = document.getElementById('resteDisplay');
+  if (!display) return;
+  if (reste <= 0) { display.classList.add('paye'); display.innerHTML = `<div class="label">المتبقي (صفر)</div><div class="value">0.00 DA</div>`; }
+  else { display.classList.remove('paye'); display.innerHTML = `<div class="label">المتبقي للزبون</div><div class="value">${formatNumber(reste)} DA</div>`; }
+}
+async function saveVente() {
+  if (!venteClient) { showToast('اختر زبونا أولا'); return; }
+  if (ventePanier.length === 0) { showToast('أضف منتجات للسلة'); return; }
+  const total = ventePanier.reduce((s, i) => s + i.total, 0);
+  const montantPaye = parseFloat(document.getElementById('venteMontantPaye').value) || 0;
+  const modePaiement = document.getElementById('venteModePaiement').value;
+  try {
+    await apiPost('/ventes', {
+      num_facture: venteNumFacture,
+      code_client: venteClient.code,
+      nom_client: venteClient.nom,
+      items: ventePanier.map(i => ({ code_produit: i.code_produit, nom_produit: i.nom, quantite: i.quantite, prix_unitaire: i.prix_unitaire })),
+      mode_paiement: modePaiement,
+      montant_paye: montantPaye,
+      vendeur: currentUser ? currentUser.username : 'Admin'
+    });
+    showToast('تم حفظ العملية بنجاح');
+    closeVenteScreen();
+    await refreshData();
+  } catch (err) { showToast('خطأ في الحفظ: ' + err.message); }
+}
+function saveVenteFromPrint() { saveVente(); }
+function showPrintPreview() {
+  if (!venteClient) { showToast('اختر زبونا أولا'); return; }
+  if (ventePanier.length === 0) { showToast('أضف منتجات للسلة'); return; }
+  document.getElementById('printModal').classList.add('active');
+  updatePrintPreview();
+}
+function setPrintSize(size) {
+  printSize = size;
+  document.querySelectorAll('.print-size-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  updatePrintPreview();
+}
+function updatePrintPreview() {
+  const total = ventePanier.reduce((s, i) => s + i.total, 0);
+  const montantPaye = parseFloat(document.getElementById('venteMontantPaye')?.value) || 0;
+  const reste = Math.max(0, total - montantPaye);
+  const date = new Date().toLocaleDateString('fr-FR');
+  const time = new Date().toLocaleTimeString('fr-FR');
+  const ent = entreprise || {};
+  let html = '';
+  if (printSize === '58mm') {
+    html = `<div class="receipt-58mm" id="printReceipt">`;
+    html += `<div class="center bold" style="font-size:13px;">${ent.Nom || 'ANTIC Distributeur'}</div>`;
+    html += `<div class="center" style="font-size:9px;">${ent.Adresse || ''}</div>`;
+    html += `<div class="center" style="font-size:9px;">Tel: ${ent.Telephone || ''}</div>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="center" style="font-size:10px;">Facture: ${venteNumFacture}</div>`;
+    html += `<div class="center" style="font-size:9px;">${date} ${time}</div>`;
+    html += `<div class="line"></div>`;
+    html += `<div>Client: ${venteClient.nom}</div>`;
+    html += `<div>Tel: ${venteClient.telephone}</div>`;
+    html += `<div class="line"></div>`;
+    ventePanier.forEach(item => {
+      html += `<div>${item.nom}</div>`;
+      html += `<div class="item-row"><span>${item.quantite} x ${formatNumber(item.prix_unitaire)}</span><span>${formatNumber(item.total)}</span></div>`;
+    });
+    html += `<div class="line"></div>`;
+    html += `<div class="total-row" style="font-size:12px;"><span>TOTAL</span><span>${formatNumber(total)} DA</span></div>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="item-row"><span>Payé</span><span>${formatNumber(montantPaye)}</span></div>`;
+    html += `<div class="item-row"><span>Reste</span><span>${formatNumber(reste)}</span></div>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="center" style="font-size:9px;">RC: ${ent.RC || ''} | NIF: ${ent.NIF || ''}</div>`;
+    html += `<div class="center" style="font-size:10px;">Merci pour votre confiance!</div>`;
+    html += `</div>`;
+  } else {
+    html = `<div class="receipt-80mm" id="printReceipt">`;
+    html += `<div class="center bold" style="font-size:18px;">${ent.Nom || 'ANTIC DISTRIBUTEUR'}</div>`;
+    html += `<div class="center" style="font-size:11px;">${ent.Adresse || ''}</div>`;
+    html += `<div class="center" style="font-size:11px;">Tel: ${ent.Telephone || ''} | ${ent.Email || ''}</div>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="center" style="font-size:12px;">Facture N°: ${venteNumFacture}</div>`;
+    html += `<div class="center" style="font-size:11px;">Date: ${date} | Heure: ${time}</div>`;
+    html += `<div class="line"></div>`;
+    html += `<div><b>Client:</b> ${venteClient.nom}</div>`;
+    html += `<div><b>Téléphone:</b> ${venteClient.telephone}</div>`;
+    html += `<div><b>Adresse:</b> ${venteClient.adresse || ''}, ${venteClient.ville || ''}</div>`;
+    html += `<div class="line"></div>`;
+    html += `<table style="width:100%;font-size:11px;"><tr style="border-bottom:1px dashed #000;"><th style="text-align:right;">Produit</th><th>Qté</th><th>P.U</th><th>Total</th></tr>`;
+    ventePanier.forEach(item => {
+      html += `<tr><td style="text-align:right;">${item.nom}</td><td style="text-align:center;">${item.quantite}</td><td style="text-align:right;">${formatNumber(item.prix_unitaire)}</td><td style="text-align:right;">${formatNumber(item.total)}</td></tr>`;
+    });
+    html += `</table>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="total-row" style="font-size:14px;"><span><b>TOTAL</b></span><span><b>${formatNumber(total)} DA</b></span></div>`;
+    html += `<div class="line"></div>`;
+    html += `<div class="item-row"><span>Montant payé</span><span>${formatNumber(montantPaye)} DA</span></div>`;
+    html += `<div class="item-row"><span>Reste à payer</span><span>${formatNumber(reste)} DA</span></div>`;
+    html += `<div class="line"></div>`;
+    html += `<div style="font-size:10px;">RC: ${ent.RC || ''} | NIF: ${ent.NIF || ''} | NIS: ${ent.NIS || ''} | AI: ${ent.AI || ''}</div>`;
+    html += `<div class="center" style="font-size:11px;">Merci pour votre confiance!</div>`;
+    html += `</div>`;
+  }
+  document.getElementById('printPreviewArea').innerHTML = html;
+}
+function doPrint() { window.print(); }
+</script>
+</body>
+</html>
